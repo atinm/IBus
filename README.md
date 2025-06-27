@@ -1,6 +1,7 @@
 # MadFlight IBus Library
 
-A modern, event-driven C++ library for handling Flysky/Turnigy RC iBUS protocol, specifically designed for MadFlight boards using Mf_Serial.
+A modern, event-driven C++ library for handling Flysky/Turnigy RC iBUS protocol, specifically designed for MadFlight boards using MF_Serial. Depends on MF_Serial.h from Madflight and so will only work
+in the Madflight source tree.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 

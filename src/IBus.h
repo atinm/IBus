@@ -2,7 +2,7 @@
  * MadFlight IBus Library
  *
  * A modern C++ library for handling Flysky/Turnigy RC iBUS protocol
- * Designed specifically for MadFlight boards using Mf_Serial
+ * Designed specifically for MadFlight boards using MF_Serial
  *
  * MIT License
  *
@@ -34,8 +34,8 @@
 #include <stddef.h>
 #include <functional>
 
-// Forward declaration for Mf_Serial
-class Mf_Serial;
+// Forward declaration for MF_Serial
+class MF_Serial;
 
 /**
  * @brief MadFlight IBus Library - Event-Driven Implementation
@@ -83,12 +83,12 @@ public:
     /**
      * @brief Initialize the IBus communication with event-driven processing
      *
-     * @param serial Reference to Mf_Serial port to use
+     * @param serial Reference to MF_Serial port to use
      * @param timer_id Timer ID for automatic processing (use NO_TIMER to disable)
      * @param rx_pin RX pin number (optional, auto-detected on MadFlight)
      * @param tx_pin TX pin number (optional, auto-detected on MadFlight)
      */
-    void begin(Mf_Serial& serial, int8_t timer_id = 0, int8_t rx_pin = -1, int8_t tx_pin = -1);
+    void begin(MF_Serial& serial, int8_t timer_id = 0, int8_t rx_pin = -1, int8_t tx_pin = -1);
 
     /**
      * @brief Set callback for channel updates (event-driven approach)
@@ -228,7 +228,7 @@ private:
     };
 
     // Member variables with different organization
-    Mf_Serial* m_serial_interface;
+    MF_Serial* m_serial_interface;
     MessageParser m_parser;
     uint16_t m_channel_values[MAX_CHANNELS];
     SensorEntry m_sensor_registry[MAX_SENSORS];
@@ -243,6 +243,7 @@ private:
     ErrorCallback m_error_callback;
 
     // Different processing methods
+    void process_complete_message();
     void handle_servo_message(const uint8_t* data, uint8_t length);
     void handle_sensor_message(const uint8_t* data, uint8_t length);
     void send_sensor_reply(uint8_t sensor_id, uint8_t command_type);

@@ -2,7 +2,7 @@
  * MadFlight IBus Library
  *
  * A modern C++ library for handling Flysky/Turnigy RC iBUS protocol
- * Designed specifically for MadFlight boards using Mf_Serial
+ * Designed specifically for MadFlight boards using MF_Serial
  *
  * MIT License
  *
@@ -29,6 +29,7 @@
 
 #include <Arduino.h>
 #include "IBus.h"
+#include "../../../hal/MF_Serial.h"
 
 // Static instance management (different approach)
 IBus* IBus::m_primary_instance = nullptr;
@@ -83,7 +84,7 @@ IBus::~IBus() {
 /**
  * Initialize the IBus communication with event-driven processing
  */
-void IBus::begin(Mf_Serial& serial, int8_t timer_id, int8_t rx_pin, int8_t tx_pin) {
+void IBus::begin(MF_Serial& serial, int8_t timer_id, int8_t rx_pin, int8_t tx_pin) {
     // Initialize the serial interface
     serial.begin(115200);
     m_serial_interface = &serial;
@@ -327,41 +328,41 @@ void IBus::send_sensor_reply(uint8_t sensor_id, uint8_t command_type) {
     switch (command_type) {
         case IBUS_CMD_SENSOR_DISCOVER:
             // Send discover response
-            m_serial_interface->write(0x04);
-            m_serial_interface->write(IBUS_CMD_SENSOR_DISCOVER + sensor_id);
-            m_serial_interface->write(0x7A);
-            m_serial_interface->write(0xFF);
+            {
+                uint8_t response[] = {0x04, static_cast<uint8_t>(IBUS_CMD_SENSOR_DISCOVER + sensor_id), 0x7A, 0xFF};
+                m_serial_interface->write(response, sizeof(response));
+            }
             break;
 
         case IBUS_CMD_SENSOR_TYPE:
             // Send sensor type response
-            m_serial_interface->write(0x06);
-            m_serial_interface->write(IBUS_CMD_SENSOR_TYPE + sensor_id);
-            m_serial_interface->write(sensor.type);
-            m_serial_interface->write(sensor.data_size);
-            m_serial_interface->write(0x66);
-            m_serial_interface->write(0xFF);
+            {
+                uint8_t response[] = {0x06, static_cast<uint8_t>(IBUS_CMD_SENSOR_TYPE + sensor_id), sensor.type, sensor.data_size, 0x66, 0xFF};
+                m_serial_interface->write(response, sizeof(response));
+            }
             break;
 
         case IBUS_CMD_SENSOR_DATA:
             // Send sensor data response
             m_stats.sensor_responses++;
-            uint8_t response_length = 0x04 + sensor.data_size;
-            m_serial_interface->write(response_length);
-            m_serial_interface->write(IBUS_CMD_SENSOR_DATA + sensor_id);
+            {
+                uint8_t response_length = 0x04 + sensor.data_size;
+                uint8_t response[8]; // Max size for 4-byte data + header + checksum
+                response[0] = response_length;
+                response[1] = IBUS_CMD_SENSOR_DATA + sensor_id;
+                response[2] = sensor.current_value & 0xFF;
+                response[3] = (sensor.current_value >> 8) & 0xFF;
 
-            // Send data bytes (little-endian)
-            m_serial_interface->write(sensor.current_value & 0xFF);
-            m_serial_interface->write((sensor.current_value >> 8) & 0xFF);
-
-            if (sensor.data_size == 4) {
-                m_serial_interface->write((sensor.current_value >> 16) & 0xFF);
-                m_serial_interface->write((sensor.current_value >> 24) & 0xFF);
+                int response_size = 4;
+                if (sensor.data_size == 4) {
+                    response[4] = (sensor.current_value >> 16) & 0xFF;
+                    response[5] = (sensor.current_value >> 24) & 0xFF;
+                    response_size = 6;
+                }
+                response[response_size] = 0x00; // Checksum low
+                response[response_size + 1] = 0x00; // Checksum high
+                m_serial_interface->write(response, response_size + 2);
             }
-
-            // Send checksum (simplified)
-            m_serial_interface->write(0x00);
-            m_serial_interface->write(0x00);
             break;
     }
 }
