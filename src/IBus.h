@@ -179,14 +179,15 @@ public:
     uint8_t get_active_sensor_count() const;
 
 private:
-    // Protocol constants (different naming and organization)
-    static const uint8_t IBUS_FRAME_SIZE = 0x20;
-    static const uint8_t IBUS_HEADER_SIZE = 3;
-    static const uint8_t IBUS_FRAME_GAP_MS = 3;
-    static const uint8_t IBUS_CMD_SERVO = 0x40;
-    static const uint8_t IBUS_CMD_SENSOR_DISCOVER = 0x80;
-    static const uint8_t IBUS_CMD_SENSOR_TYPE = 0x90;
-    static const uint8_t IBUS_CMD_SENSOR_DATA = 0xA0;
+    // Protocol constants - standard iBUS protocol (matching IBusBM)
+    static const uint8_t IBUS_FRAME_SIZE = 32;
+    static const uint8_t IBUS_HEADER_SIZE = 4;
+    static const uint8_t IBUS_OVERHEAD = 3; // packet is <len><cmd><data....><chk_low><chk_high>, overhead=cmd+chk bytes
+    static const uint8_t IBUS_TIMEGAP = 3; // Packets are received very ~7ms so use ~half that for the gap
+    static const uint8_t IBUS_CMD_SERVO = 0x40;        // Command to set servo or motor speed is always 0x40
+    static const uint8_t IBUS_CMD_SENSOR_DISCOVER = 0x80; // Command discover sensor (lowest 4 bits are sensor)
+    static const uint8_t IBUS_CMD_SENSOR_TYPE = 0x90;     // Command discover sensor (lowest 4 bits are sensor)
+    static const uint8_t IBUS_CMD_SENSOR_DATA = 0xA0;    // Command send sensor data (lowest 4 bits are sensor)
 
     // Different parsing approach - using a parser class
     class MessageParser {
@@ -195,6 +196,14 @@ private:
             INCOMPLETE,
             COMPLETE,
             ERROR
+        };
+
+        enum class State {
+            GET_LENGTH,
+            GET_DATA,
+            GET_CHKSUM_LOW,
+            GET_CHKSUM_HIGH,
+            DISCARD
         };
 
         ParseResult parse_byte(uint8_t byte);
@@ -211,8 +220,7 @@ private:
         uint16_t m_calculated_checksum;
         uint16_t m_received_checksum;
         bool m_checksum_valid;
-
-        void calculate_checksum();
+        State m_state;
     };
 
     // Different sensor management approach
